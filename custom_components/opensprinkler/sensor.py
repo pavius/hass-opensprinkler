@@ -55,6 +55,7 @@ def _create_entities(hass: HomeAssistant, entry: dict):
 
     for _, station in controller.stations.items():
         entities.append(StationStatusSensor(entry, name, station, coordinator))
+        entities.append(StationFlowSensor(controller, entry, name, station, coordinator))
 
     return entities
 
@@ -287,3 +288,40 @@ class StationStatusSensor(OpenSprinklerStationEntity, OpenSprinklerSensor, Entit
     def _get_state(self) -> str:
         """Retrieve latest state."""
         return self._station.status
+
+
+class StationFlowSensor(OpenSprinklerStationEntity, OpenSprinklerSensor, Entity):
+
+    def __init__(self, controller, entry, name, station, coordinator):
+        self._station = station
+        self._entity_type = "sensor"
+        self._controller = controller
+        super().__init__(entry, name, coordinator)
+
+    @property
+    def name(self) -> str:
+        return self._station.name + " Station Flow Rate (3)"
+
+    @property
+    def unique_id(self) -> str:
+        return slugify(
+            f"{self._entry.unique_id}_{self._entity_type}_station_flow_rate_{self._station.index}"
+        )
+
+    @property
+    def icon(self) -> str:
+        """Return icon."""
+        return "mdi:speedometer"
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of the flow rate."""
+        return "L/min"
+
+    def _get_state(self):
+        """Retrieve latest state."""
+        if self._station.is_running:
+            return self._controller.flow_rate
+
+        return 0.0
+
